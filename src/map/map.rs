@@ -10,7 +10,7 @@ impl Map {
     pub fn get_map(level: i32)->Map {
         if level == 1 {
             return Map {
-                path: vec![vec2(-200.,-200.), vec2(-100.,0.), vec2(100., 0.), vec2(200.,200.)],
+                path: vec![vec2(-200.,-100.), vec2(-100.,100.), vec2(100., 100.), vec2(200.,300.)],
                 cumulative_dist: vec![0., 223.60679775, 223.60679775 + 200., 223.60679775*2. + 200.]
             };
         } else {

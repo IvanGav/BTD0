@@ -43,6 +43,10 @@ Things to keep in mind:
 - Knockback/blowback
 - Global effects
 
+Uh, there's a problem
+When a bloon gets popped, none of its children can get popped by the same projectile. That's a problem, since I need to track each child's parents.
+I also neglected to realize that layer skipping is a headache and a half to deal with.
+
 ### Internals - how it actually works (or doesn't)
 
 So empty =(

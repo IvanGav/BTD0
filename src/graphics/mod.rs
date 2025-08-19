@@ -13,6 +13,10 @@ impl Plugin for GraphicsPlugin {
         .add_systems(Startup, ui::init_text)
         .add_systems(Update, ui::display_stats);
 
-        app.add_systems(Update, (user_input::keybind_spawn_bloon, user_input::keybind_global_damage));
+        app.add_systems(Update, (
+            user_input::keybind_spawn_bloon, 
+            user_input::keybind_global_damage, 
+            user_input::keybind_spawn_projectile
+        ));
     }
 }

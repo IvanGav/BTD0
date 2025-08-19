@@ -1,4 +1,4 @@
-use bevy::{math::vec2, prelude::*};
+use bevy::{math::vec2, prelude::*, utils::HashSet};
 
 use crate::map::map::*;
 
@@ -6,7 +6,7 @@ use crate::map::map::*;
     Components
 */
 
-#[derive(Component)]
+#[derive(Component, Default)]
 #[require(RoadEntity, Sprite)]
 /// A component that indicates that an entity is a bloon
 pub struct Bloon {
@@ -14,6 +14,7 @@ pub struct Bloon {
     pub hp: i32,
     pub bloon_modifiers: Vec<BloonModifier>,
     pub status_effects: Vec<BloonEffect>,
+    // pub parents: HashSet<Entity>,
 }
 
 #[derive(Component, Default, Clone)]
@@ -47,10 +48,10 @@ impl Bloon {
         match tier {
             BloonTier::Purple => modifiers.push(BloonModifier::MagicImmune),
             BloonTier::Black => modifiers.push(BloonModifier::ExplosionImmune),
-            BloonTier::White => modifiers.push(BloonModifier::FrozenImmune),
+            BloonTier::White => modifiers.push(BloonModifier::ColdImmune),
             BloonTier::Zebra => {
                 modifiers.push(BloonModifier::ExplosionImmune);
-                modifiers.push(BloonModifier::FrozenImmune);
+                modifiers.push(BloonModifier::ColdImmune);
             },
             BloonTier::Lead => modifiers.push(BloonModifier::SharpImmune),
             BloonTier::DDT => {
@@ -60,7 +61,7 @@ impl Bloon {
             _ => ()
         };
         let hp_mult = if modifiers.contains(&BloonModifier::Fortified) { tier.get_fortified_hp_mult() } else { 1 };
-        return Bloon {hp: tier.get_base_hp() * hp_mult, bloon_tier: tier, bloon_modifiers: modifiers, status_effects: vec![]};
+        return Bloon {hp: tier.get_base_hp() * hp_mult, bloon_tier: tier, bloon_modifiers: modifiers, ..Default::default()};
     }
     pub fn apply_effect(&mut self, effect: BloonEffect) {
         self.status_effects.push(effect);
@@ -143,7 +144,7 @@ impl BloonTier {
             BloonTier::BFB => vec![BloonTier::MOAB, BloonTier::MOAB, BloonTier::MOAB, BloonTier::MOAB],
             BloonTier::ZOMG => vec![BloonTier::BFB, BloonTier::BFB, BloonTier::BFB, BloonTier::BFB],
             BloonTier::DDT => vec![BloonTier::Ceramic, BloonTier::Ceramic, BloonTier::Ceramic, BloonTier::Ceramic],
-            BloonTier::BAD => vec![BloonTier::ZOMG, BloonTier::ZOMG, BloonTier::ZOMG, BloonTier::DDT, BloonTier::DDT],
+            BloonTier::BAD => vec![BloonTier::ZOMG, BloonTier::ZOMG, BloonTier::DDT, BloonTier::DDT, BloonTier::DDT],
         }
     }
     pub fn get_fortified_hp_mult(&self)->i32 {
@@ -151,6 +152,27 @@ impl BloonTier {
             BloonTier::Lead => 4,
             _ => 2,
         }
+    }
+    pub fn get_base_hitbox_radius(&self)->f32 {
+        return match self {
+            BloonTier::Red => 25.,
+            BloonTier::Blue => 25.,
+            BloonTier::Green => 25.,
+            BloonTier::Yellow => 25.,
+            BloonTier::Pink => 25.,
+            BloonTier::Purple => 25.,
+            BloonTier::Black => 25.,
+            BloonTier::White => 25.,
+            BloonTier::Zebra => 25.,
+            BloonTier::Lead => 25.,
+            BloonTier::Rainbow => 25.,
+            BloonTier::Ceramic => 25.,
+            BloonTier::MOAB => 50.,
+            BloonTier::BFB => 75.,
+            BloonTier::ZOMG => 100.,
+            BloonTier::DDT => 50.,
+            BloonTier::BAD => 150.,
+        };
     }
 }
 
@@ -168,7 +190,7 @@ pub enum BloonEffect {
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum BloonModifier {
-    Fortified, Camo, Regrow, SharpImmune, MagicImmune, FrozenImmune, ExplosionImmune
+    Fortified, Camo, Regrow, Frozen, SharpImmune, MagicImmune, ColdImmune, ExplosionImmune,
 }
 
 
@@ -258,6 +280,7 @@ pub fn pop_bloons(mut cmd: Commands, map: Res<Map>, bloons: Query<(Entity, &Bloo
                 let mut child_transform = pos.clone();
                 let mut child_re = (*re).clone();
                 advance_road_entity(25.0 * i as f32, &*map, &mut child_re, &mut child_transform);
+                // child.parents.insert(e);
                 cmd.spawn((
                     get_bloon_sprite(child.bloon_tier),
                     child,
