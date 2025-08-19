@@ -7,14 +7,15 @@ use crate::map::map::*;
 */
 
 #[derive(Component, Default)]
-#[require(RoadEntity, Sprite)]
+#[require(RoadEntity, Transform)]
 /// A component that indicates that an entity is a bloon
 pub struct Bloon {
     pub bloon_tier: BloonTier,
     pub hp: i32,
     pub bloon_modifiers: Vec<BloonModifier>,
     pub status_effects: Vec<BloonEffect>,
-    // pub parents: HashSet<Entity>,
+    pub parents: HashSet<Entity>,
+    pub id: u32, // TODO: replace all Entity things with this id, because of a bug that idk how to fix otherwise, described in README
 }
 
 #[derive(Component, Default, Clone)]
@@ -181,7 +182,7 @@ impl BloonTier {
 */
 
 #[derive(PartialEq, Clone, Copy)]
-/// Effects that bloons can have. Duration in game ticks.
+/// Effects that bloons can have. Duration in game ticks. No duration indicates an instant effect, such as de-fortify.
 pub enum BloonEffect {
     Weakness {strength: i32, duration: i32},
     Speed {strength: f32, duration: i32}, // also serves as slow and stun
@@ -270,28 +271,46 @@ pub fn move_bloons(map: Res<Map>, mut bloons: Query<(&Bloon, &mut RoadEntity, &m
 }
 
 /// Check if bloons are dead. If yes, spawn children or despawn. Should happen only after the bloons have moved this turn.
+/// Big and ugly, sorry, can't do much about that.
 pub fn pop_bloons(mut cmd: Commands, map: Res<Map>, bloons: Query<(Entity, &Bloon, &RoadEntity, &Transform)>) {
+    let mut new_bloons: Vec<(Bloon, RoadEntity, Transform, Sprite)> = vec![];
     for (e, bloon, re, pos) in &bloons {
-        if bloon.hp <= 0 {
-            // TODO: layer skip
-            let child_bloons = bloon.get_child_bloons();
-            let mut i = 0;
-            for child in child_bloons {
-                let mut child_transform = pos.clone();
-                let mut child_re = (*re).clone();
-                advance_road_entity(25.0 * i as f32, &*map, &mut child_re, &mut child_transform);
-                // child.parents.insert(e);
-                cmd.spawn((
-                    get_bloon_sprite(child.bloon_tier),
-                    child,
-                    child_re,
-                    child_transform,
-                ));
-                i += 1;
-            }
-            cmd.entity(e).despawn();
+        if bloon.hp > 0 { continue; }
+        // Decide whether layer skip is necessary or not
+        let child_bloons = if bloon.hp == 0 { bloon.get_child_bloons() } else { calculate_overkill(bloon) };
+        match child_bloons.len() {
+            0 => { cmd.entity(e).despawn(); },
+            1 => {
+                // let mut child = child_bloons.remove(0); // requires to make `child_bloons` mut and mut is stinky
+                let child = child_bloons.into_iter().next().unwrap();
+                let child_sprite = get_bloon_sprite(child.bloon_tier);
+                cmd.entity(e).insert((child,child_sprite));
+            },
+            _ => {
+                let mut i = 0;
+                for mut child in child_bloons {
+                    let child_sprite = get_bloon_sprite(child.bloon_tier);
+                    if i == 0 { 
+                        // replace self; no need to spawn an extra bloon
+                        cmd.entity(e).insert((child,child_sprite));
+                    } else {
+                        child.parents.insert(e);
+                        let mut child_re = re.clone();
+                        let mut child_transform = pos.clone();
+                        advance_road_entity(25.0 * i as f32, &*map, &mut child_re, &mut child_transform);
+                        new_bloons.push((
+                            child,
+                            child_re,
+                            child_transform,
+                            child_sprite,
+                        ));
+                    }
+                    i += 1;
+                }
+            },
         }
     }
+    cmd.spawn_batch(new_bloons);
 }
 
 /// Despawn bloons which have exited the map (gone past the last node of the map)
@@ -301,4 +320,22 @@ pub fn despawn_exited_bloons(mut cmd: Commands, map: Res<Map>, bloons: Query<(En
             cmd.entity(e).despawn();
         }
     }
+}
+
+/*
+    Helper functions
+*/
+
+/// Assume bloon.hp to be 0 or <0. Return all children that it would spawn, taking overkill (layer skip) into account
+pub fn calculate_overkill(bloon: &Bloon)->Vec<Bloon> {
+    let mut children = bloon.get_child_bloons();
+    if bloon.hp < 0 {
+        let mut new_children = vec![];
+        for mut ch in children {
+            ch.hp += bloon.hp;
+            new_children.append(&mut calculate_overkill(&ch));
+        }
+        children = new_children;
+    }
+    return children;
 }

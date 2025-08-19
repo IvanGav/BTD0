@@ -47,6 +47,23 @@ Uh, there's a problem
 When a bloon gets popped, none of its children can get popped by the same projectile. That's a problem, since I need to track each child's parents.
 I also neglected to realize that layer skipping is a headache and a half to deal with.
 
+New insights:
+- Bloon modifiers can be represented by a bit mask. Projectile popping type can be represented with a bit mask as well.
+  - Not a big issue rn, leave for later.
+- Anything soaks though bloon layers. Select few things soak through blimp layers. Optimizing the soak for bloons might be a good idea.
+  - How?
+  - I can still use negative health as an overkill amount to transfer to children.
+  - I should not spawn children right away. Instead, I need to calculate the true final result internally.
+- For a faithful recreation, bloons only leave 1 child, after round 80. This can put more focus on optimizing for not having lots of small bloons too.
+  - Yeah no, don't worry about it rn.
+- Hitting child bloons after popping a parent is a big issue. I need to have an id for every bloon, since using Entity after it was despawned is invalid.
+  - ~~Rather than going 0->MAX in numbers, I can use some sort of rng to give out ids to bloons.~~
+  - ~~Wasted space, but oh well. I can't rely on despawned bloons' Entity id not being used again by bevy.~~
+  - Scratch that, Entity has a generation counter. While it technically makes everything twice as long, whatever, really
+  - Actually no, scratch that, I just realized that, for optimization reasons, I'm not summoning a new entity for the first child of a bloon; I'm transforming the parent into its first child. However that means that all other children of this bloon will know that a *still alive* bloon was their parent. Which it wasn't, but I can't change its Entity id. So making a u8 id would be much easier and just change it even for the same bloon.
+- Money earning of regrows is messed up. I also want to have an option to remove the regrown bloons giving pops.
+  - Yeah no just don't worry rn, it's actually messed up.
+
 ### Internals - how it actually works (or doesn't)
 
 So empty =(

@@ -74,13 +74,19 @@ pub fn damage_bloons(mut cmd: Commands, mut damage_ew: EventWriter<BloonDamageEv
     for (pe, mut p, ppos) in &mut p {
         if p.pierce == 0 { continue; }
         for (be, bloon, bpos) in &bloons {
-            if !p.hit_bloons.contains(&be) && p.pierce > 0 {
-                if hypot(ppos.translation.x - bpos.translation.x, ppos.translation.y - bpos.translation.y) < bloon.bloon_tier.get_base_hitbox_radius() + p.hitbox_radius {
-                    damage_events.push(BloonDamageEvent { damage: p.damage, status_effect: None, bloon: be });
-                    p.hit_bloons.insert(be);
-                    p.pierce -= 1;
-                    if p.pierce == 0 { cmd.entity(pe).despawn(); }
-                }
+            // an atrocious execution that needs to be fixed (TODO) but basically check if this bloon or any of its parents were ever hit by this projectile
+            if p.hit_bloons.contains(&be) { continue; }
+            let mut flag = false;
+            for bparent in &bloon.parents {
+                if p.hit_bloons.contains(bparent) { flag = true; break; }
+            }
+            if flag { break; }
+            // and here just check for actual collision
+            if hypot(ppos.translation.x - bpos.translation.x, ppos.translation.y - bpos.translation.y) < bloon.bloon_tier.get_base_hitbox_radius() + p.hitbox_radius {
+                damage_events.push(BloonDamageEvent { damage: p.damage, status_effect: None, bloon: be });
+                p.hit_bloons.insert(be);
+                p.pierce -= 1;
+                if p.pierce == 0 { cmd.entity(pe).despawn(); break; }
             }
         }
     }
