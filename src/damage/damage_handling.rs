@@ -1,3 +1,5 @@
+use std::cmp::min;
+
 use bevy::{math::{ops::hypot, vec2}, prelude::*, utils::HashSet};
 
 use crate::bloon::bloon::*;
@@ -13,7 +15,7 @@ pub struct DamageDealer {
     pub pierce: u32,
     pub damage_type: DamageType,
     pub hitbox_radius: f32, // all damage dealers have a circular hitbox, for now
-    pub hit_bloons: HashSet<Entity>,
+    pub hit_bloons: Vec<BloonHitComparator>,
 }
 
 /*
@@ -31,6 +33,38 @@ pub enum DamageType {
     Energy, // cannot damage SharpImmune (lead) and MagicImmune (purple)
     Sharp, // cannot damage SharpImmune (lead) and Frozen (frozen by monkeys)
     Cold, // cannot damage SharpImmune (lead) and ColdImmune (white)
+}
+
+/// Purely used to test for bloon hits
+pub struct BloonHitComparator {
+    pub family: u32,
+    pub layer: u8,
+    pub tree: u32,
+}
+
+/*
+    Impl
+*/
+
+impl DamageDealer {
+    pub fn has_hit(&self, bloon: &BloonHitComparator)->bool {
+        for i in &self.hit_bloons {
+            if i.same_subtree_as(bloon) { return true; }
+        }
+        return false;
+    }
+}
+
+impl BloonHitComparator {
+    pub fn same_subtree_as(&self, other: &Self) -> bool {
+        if self.family != other.family { return false; }
+        let min_layer = min(self.layer, other.layer);
+        let mask = create_first_n_bits_mask(min_layer);
+        // if self.tree != other.tree {
+        //     println!("{} and {} are {} (min layer {})", self.tree, other.tree, (self.tree & mask) == (other.tree & mask), min_layer);
+        // }
+        return (self.tree & mask) == (other.tree & mask);
+    }
 }
 
 /*
@@ -75,16 +109,11 @@ pub fn damage_bloons(mut cmd: Commands, mut damage_ew: EventWriter<BloonDamageEv
         if p.pierce == 0 { continue; }
         for (be, bloon, bpos) in &bloons {
             // an atrocious execution that needs to be fixed (TODO) but basically check if this bloon or any of its parents were ever hit by this projectile
-            if p.hit_bloons.contains(&be) { continue; }
-            let mut flag = false;
-            for bparent in &bloon.parents {
-                if p.hit_bloons.contains(bparent) { flag = true; break; }
-            }
-            if flag { break; }
+            if p.has_hit(&BloonHitComparator {family: bloon.family_id, layer: bloon.child_layer, tree: bloon.child_tree}) { continue; }
             // and here just check for actual collision
             if hypot(ppos.translation.x - bpos.translation.x, ppos.translation.y - bpos.translation.y) < bloon.bloon_tier.get_base_hitbox_radius() + p.hitbox_radius {
                 damage_events.push(BloonDamageEvent { damage: p.damage, status_effect: None, bloon: be });
-                p.hit_bloons.insert(be);
+                p.hit_bloons.push(BloonHitComparator { family: bloon.family_id, layer: bloon.child_layer, tree: bloon.child_tree });
                 p.pierce -= 1;
                 if p.pierce == 0 { cmd.entity(pe).despawn(); break; }
             }
@@ -103,4 +132,14 @@ pub fn global_damage_effects(mut bloons: Query<&mut Bloon>, mut global_damage_ev
             }
         }
     }
+}
+
+/*
+    Helper functions
+*/
+
+/// Create a bit mask
+/// Just don't give n > 32
+fn create_first_n_bits_mask(n: u8) -> u32 {
+    (1u32 << n) - 1
 }

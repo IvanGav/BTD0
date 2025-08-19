@@ -9,7 +9,7 @@ use crate::damage::projectile::*;
 
 pub fn keybind_spawn_bloon(mut cmd: Commands, keyboard_input: Res<ButtonInput<KeyCode>>, map: Res<Map>) {
     if keyboard_input.just_pressed(KeyCode::KeyS) {
-        cmd.spawn(create_bloon(BloonTier::Ceramic, &*map));
+        cmd.spawn(create_bloon(BloonTier::Zebra, &*map));
     }
 }
 
@@ -26,7 +26,7 @@ pub fn keybind_spawn_projectile(mut cmd: Commands, keyboard_input: Res<ButtonInp
             let vy = -(pos.y-window.height()/2.)/10.;
             cmd.spawn((
                 SimpleProjectile { vx: vx, vy: vy, bounce: 0, collide: false, lifetime: 40 },
-                DamageDealer { damage: 7, pierce: 300, damage_type: DamageType::Sharp, hitbox_radius: 5., ..default() },
+                DamageDealer { damage: 1, pierce: 300, damage_type: DamageType::Sharp, hitbox_radius: 5., ..default() },
                 Transform::from_translation(vec3(0.,0.,1.)),
                 get_projectile_sprite(),
             ));

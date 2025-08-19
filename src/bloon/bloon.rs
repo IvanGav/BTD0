@@ -1,4 +1,5 @@
-use bevy::{math::vec2, prelude::*, utils::HashSet};
+use bevy::{math::{ops::log2, vec2}, prelude::*, utils::HashSet};
+use rand::prelude::*;
 
 use crate::map::map::*;
 
@@ -14,8 +15,9 @@ pub struct Bloon {
     pub hp: i32,
     pub bloon_modifiers: Vec<BloonModifier>,
     pub status_effects: Vec<BloonEffect>,
-    pub parents: HashSet<Entity>,
-    pub id: u32, // TODO: replace all Entity things with this id, because of a bug that idk how to fix otherwise, described in README
+    pub family_id: u32, // needed to keep track of own parents; described in README
+    pub child_layer: u8, // needed to keep track of own parents; described in README
+    pub child_tree: u32, // needed to keep track of own parents; described in README
 }
 
 #[derive(Component, Default, Clone)]
@@ -62,7 +64,13 @@ impl Bloon {
             _ => ()
         };
         let hp_mult = if modifiers.contains(&BloonModifier::Fortified) { tier.get_fortified_hp_mult() } else { 1 };
-        return Bloon {hp: tier.get_base_hp() * hp_mult, bloon_tier: tier, bloon_modifiers: modifiers, ..Default::default()};
+        return Bloon {
+            hp: tier.get_base_hp() * hp_mult,
+            bloon_tier: tier,
+            bloon_modifiers: modifiers,
+            family_id: rand::rng().next_u32(), // make a new and random family id
+            ..Default::default()
+        };
     }
     pub fn apply_effect(&mut self, effect: BloonEffect) {
         self.status_effects.push(effect);
@@ -70,9 +78,17 @@ impl Bloon {
     pub fn get_child_bloons(&self)->Vec<Bloon> {
         let base_children = self.bloon_tier.get_base_child_bloons();
         let mut actual_children = vec![];
+        let mut i = 0;
+        let child_num = base_children.len();
         for ch in base_children {
             // TODO: Right now fortified will propagate through the red bloon; should drop at ceram level
-            actual_children.push(Bloon::with(ch, self.bloon_modifiers.to_vec()));
+            let mut child = Bloon::with(ch, self.bloon_modifiers.to_vec());
+            child.family_id = self.family_id;
+            child.child_tree = self.child_tree;
+            child.child_layer = self.child_layer;
+            update_child_parent_tree(&mut child, i, child_num);
+            actual_children.push(child);
+            i += 1;
         }
         return actual_children;
     }
@@ -128,6 +144,8 @@ impl BloonTier {
         };
     }
     pub fn get_base_child_bloons(&self)->Vec<BloonTier> {
+        // for any new bloons: here's a tip
+        // my other code is optimized so it best handles it if "weaker" bloons (bloons with less total children) are put in last in this list
         match self {
             BloonTier::Red => vec![],
             BloonTier::Blue => vec![BloonTier::Red],
@@ -288,16 +306,15 @@ pub fn pop_bloons(mut cmd: Commands, map: Res<Map>, bloons: Query<(Entity, &Bloo
             },
             _ => {
                 let mut i = 0;
-                for mut child in child_bloons {
+                for child in child_bloons {
                     let child_sprite = get_bloon_sprite(child.bloon_tier);
                     if i == 0 { 
                         // replace self; no need to spawn an extra bloon
                         cmd.entity(e).insert((child,child_sprite));
                     } else {
-                        child.parents.insert(e);
                         let mut child_re = re.clone();
                         let mut child_transform = pos.clone();
-                        advance_road_entity(25.0 * i as f32, &*map, &mut child_re, &mut child_transform);
+                        advance_road_entity(50.0 * i as f32, &*map, &mut child_re, &mut child_transform);
                         new_bloons.push((
                             child,
                             child_re,
@@ -338,4 +355,13 @@ pub fn calculate_overkill(bloon: &Bloon)->Vec<Bloon> {
         children = new_children;
     }
     return children;
+}
+
+/// Given a `bloon` which is a child of a just-popped bloon, how many children were spawned `child_num` and `bloon`'s index in those child bloons `i`, update `bloon`'s `child_layer` and `child_tree` appropriately
+pub fn update_child_parent_tree(bloon: &mut Bloon, i: i32, child_num: usize) {
+    // let add_layer = log2(child_num as f32).floor() as u8;
+    // let rem_layer = child_num - (2 << add_layer as usize);
+    let add_layer = log2(child_num as f32).ceil() as u8; // suboptimal; BADs will use up extra space; doesn't matter for now (TODO)
+    bloon.child_tree |= (i as u32) << (bloon.child_layer as u32);
+    bloon.child_layer += add_layer;
 }
