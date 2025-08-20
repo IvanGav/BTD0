@@ -108,7 +108,6 @@ pub fn damage_bloons(mut cmd: Commands, mut damage_ew: EventWriter<BloonDamageEv
     for (pe, mut p, ppos) in &mut p {
         if p.pierce == 0 { continue; }
         for (be, bloon, bpos) in &bloons {
-            // an atrocious execution that needs to be fixed (TODO) but basically check if this bloon or any of its parents were ever hit by this projectile
             if p.has_hit(&BloonHitComparator {family: bloon.family_id, layer: bloon.child_layer, tree: bloon.child_tree}) { continue; }
             // and here just check for actual collision
             if hypot(ppos.translation.x - bpos.translation.x, ppos.translation.y - bpos.translation.y) < bloon.bloon_tier.get_base_hitbox_radius() + p.hitbox_radius {

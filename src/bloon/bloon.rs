@@ -1,5 +1,6 @@
 use bevy::{math::{ops::log2, vec2}, prelude::*, utils::HashSet};
 use rand::prelude::*;
+use std::fmt;
 
 use crate::map::map::*;
 
@@ -20,6 +21,35 @@ pub struct Bloon {
     pub child_tree: u32, // needed to keep track of own parents; described in README
 }
 
+impl fmt::Debug for Bloon {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Bloon")
+         .field("tier", &self.bloon_tier)
+         .field("hp", &self.hp)
+         .finish()
+    }
+}
+
+impl Ord for Bloon {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        return self.bloon_tier.cmp(&other.bloon_tier);
+    }
+}
+
+impl PartialOrd for Bloon {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for Bloon {
+    fn eq(&self, other: &Self) -> bool {
+        return self.bloon_tier == other.bloon_tier;
+    }
+}
+
+impl Eq for Bloon {}
+
 #[derive(Component, Default, Clone)]
 /// A component that lets an entity to occupy a position on a road and move along the road
 /// Do not apply to road items, as they don't need to move along the road
@@ -29,7 +59,7 @@ pub struct RoadEntity {
     pub waypoint: Vec2, // may or may not be target node's position; after reaching, incrememnt `target_node`
 }
 
-#[derive(PartialEq, Default, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Default, Clone, Copy, Debug)]
 /// The bloon tier determines base stats - speed, hp, etc
 pub enum BloonTier {
     #[default]
@@ -92,6 +122,15 @@ impl Bloon {
         }
         return actual_children;
     }
+    // these two are jank, i'm just desperate rn
+    // pub fn set_family(mut self, family: u32)->Self {
+    //     self.family_id = family;
+    //     return self;
+    // }
+    // pub fn child(mut self, )->Self {
+    //     self.family_id = family;
+    //     update_child_parent_tree(&mut self, i, child_num);
+    // }
 }
 
 impl BloonTier {
@@ -235,7 +274,6 @@ pub fn advance_road_entity(step: f32, map: &Map, re: &mut RoadEntity, pos: &mut 
 
     if total_dist < step {
         // Move to the node and advance the node index
-        // TODO: Should overflow to movement along the next node
         pos.translation.x = re.waypoint.x;
         pos.translation.y = re.waypoint.y;
         re.target_node += 1;
@@ -247,6 +285,7 @@ pub fn advance_road_entity(step: f32, map: &Map, re: &mut RoadEntity, pos: &mut 
             re.waypoint = vec2(0.,0.);
             re.track_pos = 0.;
         }
+        advance_road_entity(step-total_dist, map, re, pos);
     } else {
         pos.translation.x += dx * step / total_dist;
         pos.translation.y += dy * step / total_dist;
@@ -295,7 +334,8 @@ pub fn pop_bloons(mut cmd: Commands, map: Res<Map>, bloons: Query<(Entity, &Bloo
     for (e, bloon, re, pos) in &bloons {
         if bloon.hp > 0 { continue; }
         // Decide whether layer skip is necessary or not
-        let child_bloons = if bloon.hp == 0 { bloon.get_child_bloons() } else { calculate_overkill(bloon) };
+        let child_bloons = if bloon.hp == 0 { bloon.get_child_bloons() } else { calculate_overkill_iterative(bloon) };
+        // println!("popping {:?} gives children: {:?}", bloon, child_bloons);
         match child_bloons.len() {
             0 => { cmd.entity(e).despawn(); },
             1 => {
@@ -314,7 +354,7 @@ pub fn pop_bloons(mut cmd: Commands, map: Res<Map>, bloons: Query<(Entity, &Bloo
                     } else {
                         let mut child_re = re.clone();
                         let mut child_transform = pos.clone();
-                        advance_road_entity(50.0 * i as f32, &*map, &mut child_re, &mut child_transform);
+                        advance_road_entity(25.0 * i as f32, &*map, &mut child_re, &mut child_transform);
                         new_bloons.push((
                             child,
                             child_re,
@@ -354,8 +394,86 @@ pub fn calculate_overkill(bloon: &Bloon)->Vec<Bloon> {
         }
         children = new_children;
     }
+    children.sort();
     return children;
 }
+
+/// Assume bloon.hp to be 0 or <0. Return all children that it would spawn, taking overkill (layer skip) into account
+pub fn calculate_overkill_iterative(bloon: &Bloon)->Vec<Bloon> {
+    let mut children = bloon.get_child_bloons();
+    for i in &mut children {
+        i.hp += bloon.hp;
+    }
+    let mut final_children = vec![];
+    while !children.is_empty() {
+        let mut new_children = vec![];
+        for ch in children {
+            if ch.hp > 0 {
+                final_children.push(ch);
+            } else {
+                let mut temp_children = ch.get_child_bloons();
+                for i in &mut temp_children {
+                    i.hp += ch.hp;
+                }
+                new_children.append(&mut temp_children);
+            }
+        }
+        children = new_children;
+    }
+    children.sort();
+    return final_children;
+}
+
+// don't look, i'm desperate
+// pub fn lookup_overkill_bloon(bloon: &Bloon)->Vec<Bloon> {
+//     return match bloon.bloon_tier {
+//         BloonTier::Red => vec![],
+//         BloonTier::Blue => {
+//             match bloon.hp {
+//                 -1 => vec![Bloon::with(BloonTier::Red, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)],
+//                 _ => vec![],
+//             }
+//         },
+//         BloonTier::Green => {
+//             match bloon.hp {
+//                 -1 => vec![Bloon::with(BloonTier::Blue, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)],
+//                 -2 => vec![Bloon::with(BloonTier::Red, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)],
+//                 _ => vec![],
+//             }
+//         },
+//         BloonTier::Yellow => {
+//             match bloon.hp {
+//                 -1 => vec![Bloon::with(BloonTier::Green, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)],
+//                 -2 => vec![Bloon::with(BloonTier::Blue, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)],
+//                 -3 => vec![Bloon::with(BloonTier::Red, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)],
+//                 _ => vec![],
+//             }
+//         },
+//         BloonTier::Pink => {
+//             match bloon.hp {
+//                 -1 => vec![Bloon::with(BloonTier::Yellow, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)],
+//                 -2 => vec![Bloon::with(BloonTier::Green, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)],
+//                 -3 => vec![Bloon::with(BloonTier::Blue, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)],
+//                 -4 => vec![Bloon::with(BloonTier::Red, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)],
+//                 _ => vec![],
+//             }
+//         },
+//         BloonTier::Black => {
+//             match bloon.hp {
+//                 -1 => vec![
+//                     Bloon::with(BloonTier::Pink, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id),
+//                     Bloon::with(BloonTier::Pink, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)
+//                 ],
+//                 -2 => vec![Bloon::with(BloonTier::Yellow, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)],
+//                 -3 => vec![Bloon::with(BloonTier::Green, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)],
+//                 -4 => vec![Bloon::with(BloonTier::Blue, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)],
+//                 -5 => vec![Bloon::with(BloonTier::Red, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)],
+//                 _ => vec![],
+//             }
+//         },
+//         _ => vec![],
+//     }
+// }
 
 /// Given a `bloon` which is a child of a just-popped bloon, how many children were spawned `child_num` and `bloon`'s index in those child bloons `i`, update `bloon`'s `child_layer` and `child_tree` appropriately
 pub fn update_child_parent_tree(bloon: &mut Bloon, i: i32, child_num: usize) {
