@@ -334,7 +334,8 @@ pub fn pop_bloons(mut cmd: Commands, map: Res<Map>, bloons: Query<(Entity, &Bloo
     for (e, bloon, re, pos) in &bloons {
         if bloon.hp > 0 { continue; }
         // Decide whether layer skip is necessary or not
-        let child_bloons = if bloon.hp == 0 { bloon.get_child_bloons() } else { calculate_overkill_iterative(bloon) };
+        // let child_bloons = if bloon.hp == 0 { bloon.get_child_bloons() } else { calculate_overkill_iterative(bloon) };
+        let child_bloons = bloon.get_child_bloons();
         // println!("popping {:?} gives children: {:?}", bloon, child_bloons);
         match child_bloons.len() {
             0 => { cmd.entity(e).despawn(); },
@@ -426,53 +427,6 @@ pub fn calculate_overkill_iterative(bloon: &Bloon)->Vec<Bloon> {
 
 // don't look, i'm desperate
 // pub fn lookup_overkill_bloon(bloon: &Bloon)->Vec<Bloon> {
-//     return match bloon.bloon_tier {
-//         BloonTier::Red => vec![],
-//         BloonTier::Blue => {
-//             match bloon.hp {
-//                 -1 => vec![Bloon::with(BloonTier::Red, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)],
-//                 _ => vec![],
-//             }
-//         },
-//         BloonTier::Green => {
-//             match bloon.hp {
-//                 -1 => vec![Bloon::with(BloonTier::Blue, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)],
-//                 -2 => vec![Bloon::with(BloonTier::Red, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)],
-//                 _ => vec![],
-//             }
-//         },
-//         BloonTier::Yellow => {
-//             match bloon.hp {
-//                 -1 => vec![Bloon::with(BloonTier::Green, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)],
-//                 -2 => vec![Bloon::with(BloonTier::Blue, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)],
-//                 -3 => vec![Bloon::with(BloonTier::Red, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)],
-//                 _ => vec![],
-//             }
-//         },
-//         BloonTier::Pink => {
-//             match bloon.hp {
-//                 -1 => vec![Bloon::with(BloonTier::Yellow, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)],
-//                 -2 => vec![Bloon::with(BloonTier::Green, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)],
-//                 -3 => vec![Bloon::with(BloonTier::Blue, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)],
-//                 -4 => vec![Bloon::with(BloonTier::Red, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)],
-//                 _ => vec![],
-//             }
-//         },
-//         BloonTier::Black => {
-//             match bloon.hp {
-//                 -1 => vec![
-//                     Bloon::with(BloonTier::Pink, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id),
-//                     Bloon::with(BloonTier::Pink, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)
-//                 ],
-//                 -2 => vec![Bloon::with(BloonTier::Yellow, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)],
-//                 -3 => vec![Bloon::with(BloonTier::Green, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)],
-//                 -4 => vec![Bloon::with(BloonTier::Blue, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)],
-//                 -5 => vec![Bloon::with(BloonTier::Red, bloon.bloon_modifiers.to_vec()).set_family(bloon.family_id)],
-//                 _ => vec![],
-//             }
-//         },
-//         _ => vec![],
-//     }
 // }
 
 /// Given a `bloon` which is a child of a just-popped bloon, how many children were spawned `child_num` and `bloon`'s index in those child bloons `i`, update `bloon`'s `child_layer` and `child_tree` appropriately

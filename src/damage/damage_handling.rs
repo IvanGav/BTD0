@@ -103,22 +103,38 @@ pub fn apply_bloon_damage(mut damage_er: EventReader<BloonDamageEvent>, mut bloo
 }
 
 /// Test if projectiles collide with bloons. If yes, send a damage taken event.
-pub fn damage_bloons(mut cmd: Commands, mut damage_ew: EventWriter<BloonDamageEvent>, bloons: Query<(Entity, &Bloon, &Transform)>, mut p: Query<(Entity, &mut DamageDealer, &Transform)>) {
-    let mut damage_events = vec![];
+// pub fn damage_bloons(mut cmd: Commands, mut damage_ew: EventWriter<BloonDamageEvent>, bloons: Query<(Entity, &Bloon, &Transform)>, mut p: Query<(Entity, &mut DamageDealer, &Transform)>) {
+//     let mut damage_events = vec![];
+//     for (pe, mut p, ppos) in &mut p {
+//         if p.pierce == 0 { continue; }
+//         for (be, bloon, bpos) in &bloons {
+//             if p.has_hit(&BloonHitComparator {family: bloon.family_id, layer: bloon.child_layer, tree: bloon.child_tree}) { continue; }
+//             // and here just check for actual collision
+//             if hypot(ppos.translation.x - bpos.translation.x, ppos.translation.y - bpos.translation.y) < bloon.bloon_tier.get_base_hitbox_radius() + p.hitbox_radius {
+//                 damage_events.push(BloonDamageEvent { damage: p.damage, status_effect: None, bloon: be });
+//                 p.hit_bloons.push(BloonHitComparator { family: bloon.family_id, layer: bloon.child_layer, tree: bloon.child_tree });
+//                 p.pierce -= 1;
+//                 if p.pierce == 0 { cmd.entity(pe).despawn(); break; }
+//             }
+//         }
+//     }
+//     damage_ew.send_batch(damage_events);
+// }
+
+/// Test if projectiles collide with bloons. If yes, send a damage taken event.
+pub fn damage_bloons(mut cmd: Commands, mut bloons: Query<(&mut Bloon, &Transform)>, mut p: Query<(Entity, &mut DamageDealer, &Transform)>) {
     for (pe, mut p, ppos) in &mut p {
         if p.pierce == 0 { continue; }
-        for (be, bloon, bpos) in &bloons {
+        for (mut bloon, bpos) in &mut bloons {
             if p.has_hit(&BloonHitComparator {family: bloon.family_id, layer: bloon.child_layer, tree: bloon.child_tree}) { continue; }
-            // and here just check for actual collision
             if hypot(ppos.translation.x - bpos.translation.x, ppos.translation.y - bpos.translation.y) < bloon.bloon_tier.get_base_hitbox_radius() + p.hitbox_radius {
-                damage_events.push(BloonDamageEvent { damage: p.damage, status_effect: None, bloon: be });
+                bloon.hp -= p.damage;
                 p.hit_bloons.push(BloonHitComparator { family: bloon.family_id, layer: bloon.child_layer, tree: bloon.child_tree });
                 p.pierce -= 1;
                 if p.pierce == 0 { cmd.entity(pe).despawn(); break; }
             }
         }
     }
-    damage_ew.send_batch(damage_events);
 }
 
 /// A system that applies a global damage effect on all active bloons
