@@ -13,7 +13,7 @@ impl Plugin for DamagePlugin {
             (damage_handling::global_damage_effects, damage_handling::damage_bloons, damage_handling::apply_bloon_damage).chain()
         )
         .add_systems(FixedUpdate, (
-            projectile::despawn_stray_projectile, 
+            // projectile::despawn_stray_projectile, 
             projectile::despawn_simple_projectile, 
             projectile::move_simple_projectile
         ));

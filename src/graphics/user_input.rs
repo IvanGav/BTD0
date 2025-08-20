@@ -24,37 +24,39 @@ pub fn keybind_spawn_projectile(mut cmd: Commands, keyboard_input: Res<ButtonInp
         if let Some(pos) = window.cursor_position() {
             let vx = (pos.x-window.width()/2.)/10.;
             let vy = -(pos.y-window.height()/2.)/10.;
+            let damage = 2;
+            let pierce = 5;
             // cmd.spawn((
             //     SimpleProjectile { vx: vx, vy: vy, bounce: 0, collide: false, lifetime: 40 },
             //     DamageDealer { damage: 10, pierce: 10, damage_type: DamageType::Sharp, hitbox_radius: 5., ..default() },
             //     Transform::from_translation(vec3(0.,0.,1.)),
             //     get_projectile_sprite(),
             // ));
-            for i in 0..10 {
+            for _ in 0..1 {
                 cmd.spawn_batch(vec![
                     (
                         SimpleProjectile { vx: vx, vy: vy, bounce: 0, collide: false, lifetime: 40 },
-                        DamageDealer { damage: 10, pierce: 10, damage_type: DamageType::Sharp, hitbox_radius: 5., ..default() },
+                        DamageDealer { damage: damage, pierce: pierce, damage_type: DamageType::Sharp, hitbox_radius: 5., ..default() },
                         Transform::from_translation(vec3(0.,0.,1.)),
                         get_projectile_sprite(),
                     ),(
                         SimpleProjectile { vx: vx+5., vy: vy, bounce: 0, collide: false, lifetime: 40 },
-                        DamageDealer { damage: 10, pierce: 10, damage_type: DamageType::Sharp, hitbox_radius: 5., ..default() },
+                        DamageDealer { damage: damage, pierce: pierce, damage_type: DamageType::Sharp, hitbox_radius: 5., ..default() },
                         Transform::from_translation(vec3(0.,0.,1.)),
                         get_projectile_sprite(),
                     ),(
                         SimpleProjectile { vx: vx-5., vy: vy, bounce: 0, collide: false, lifetime: 40 },
-                        DamageDealer { damage: 10, pierce: 10, damage_type: DamageType::Sharp, hitbox_radius: 5., ..default() },
+                        DamageDealer { damage: damage, pierce: pierce, damage_type: DamageType::Sharp, hitbox_radius: 5., ..default() },
                         Transform::from_translation(vec3(0.,0.,1.)),
                         get_projectile_sprite(),
                     ),(
                         SimpleProjectile { vx: vx, vy: vy+5., bounce: 0, collide: false, lifetime: 40 },
-                        DamageDealer { damage: 10, pierce: 10, damage_type: DamageType::Sharp, hitbox_radius: 5., ..default() },
+                        DamageDealer { damage: damage, pierce: pierce, damage_type: DamageType::Sharp, hitbox_radius: 5., ..default() },
                         Transform::from_translation(vec3(0.,0.,1.)),
                         get_projectile_sprite(),
                     ),(
                         SimpleProjectile { vx: vx, vy: vy-5., bounce: 0, collide: false, lifetime: 40 },
-                        DamageDealer { damage: 10, pierce: 10, damage_type: DamageType::Sharp, hitbox_radius: 5., ..default() },
+                        DamageDealer { damage: damage, pierce: pierce, damage_type: DamageType::Sharp, hitbox_radius: 5., ..default() },
                         Transform::from_translation(vec3(0.,0.,1.)),
                         get_projectile_sprite(),
                     )

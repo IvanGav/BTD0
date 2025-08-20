@@ -125,7 +125,8 @@ pub fn damage_bloons(mut cmd: Commands, mut damage_ew: EventWriter<BloonDamageEv
 pub fn global_damage_effects(mut bloons: Query<&mut Bloon>, mut global_damage_ev: EventReader<GlobalDamageEvent>) {
     for ev in global_damage_ev.read() {
         for mut bloon in &mut bloons {
-            bloon.hp -= ev.damage;
+            // bloon.hp -= ev.damage;
+            bloon.hp = 0;
             if let Some(effect) = &ev.status_effect {
                 bloon.apply_effect(*effect);
             }
