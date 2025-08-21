@@ -16,7 +16,8 @@ impl Plugin for GraphicsPlugin {
         app.add_systems(Update, (
             user_input::keybind_spawn_bloon, 
             user_input::keybind_global_damage, 
-            user_input::keybind_spawn_projectile
+            user_input::keybind_spawn_projectile,
+            user_input::keybind_spawn_projectile_number,
         ));
     }
 }

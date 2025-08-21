@@ -1,4 +1,4 @@
-use bevy::{math::{ops::log2, vec2}, prelude::*, utils::HashSet};
+use bevy::{math::{ops::log2, vec2}, prelude::*, utils::{HashMap, HashSet}};
 use rand::prelude::*;
 use std::fmt;
 
@@ -59,7 +59,7 @@ pub struct RoadEntity {
     pub waypoint: Vec2, // may or may not be target node's position; after reaching, incrememnt `target_node`
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Default, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Default, Clone, Copy, Debug, Hash)]
 /// The bloon tier determines base stats - speed, hp, etc
 pub enum BloonTier {
     #[default]
@@ -122,15 +122,14 @@ impl Bloon {
         }
         return actual_children;
     }
-    // these two are jank, i'm just desperate rn
-    // pub fn set_family(mut self, family: u32)->Self {
-    //     self.family_id = family;
-    //     return self;
-    // }
-    // pub fn child(mut self, )->Self {
-    //     self.family_id = family;
-    //     update_child_parent_tree(&mut self, i, child_num);
-    // }
+    // this one is jank, but i'm just desperate rn
+    pub fn child_of(mut self, parent: &Bloon, child_i: i32, total_children: usize)->Self {
+        self.family_id = parent.family_id;
+        self.child_tree = parent.child_tree;
+        self.child_layer = parent.child_layer;
+        update_child_parent_tree(&mut self, child_i, total_children);
+        return self;
+    }
 }
 
 impl BloonTier {
@@ -159,7 +158,7 @@ impl BloonTier {
             BloonTier::ZOMG => 4.5,
             BloonTier::DDT => 66.,
             BloonTier::BAD => 4.5,
-        } / 35.;
+        } / 135.;
     }
     pub fn get_base_hp(&self)->i32 {
         return match self {
@@ -235,6 +234,13 @@ impl BloonTier {
 }
 
 /*
+    Resources
+*/
+
+#[derive(Resource, Deref, DerefMut, Default)]
+pub struct OverkillLookupTable(pub HashMap<(BloonTier, i32),Vec<BloonTier>>);
+
+/*
     Non-components
 */
 
@@ -282,7 +288,7 @@ pub fn advance_road_entity(step: f32, map: &Map, re: &mut RoadEntity, pos: &mut 
             re.track_pos = map.cumulative_dist[re.target_node];
         } else {
             // maybe do something else; essentially make it do something for a tick until it's despawned
-            re.waypoint = vec2(0.,0.);
+            re.waypoint = vec2(f32::MAX,f32::MAX);
             re.track_pos = 0.;
         }
         advance_road_entity(step-total_dist, map, re, pos);
@@ -329,13 +335,13 @@ pub fn move_bloons(map: Res<Map>, mut bloons: Query<(&Bloon, &mut RoadEntity, &m
 
 /// Check if bloons are dead. If yes, spawn children or despawn. Should happen only after the bloons have moved this turn.
 /// Big and ugly, sorry, can't do much about that.
-pub fn pop_bloons(mut cmd: Commands, map: Res<Map>, bloons: Query<(Entity, &Bloon, &RoadEntity, &Transform)>) {
+pub fn pop_bloons(mut cmd: Commands, map: Res<Map>, bloons: Query<(Entity, &Bloon, &RoadEntity, &Transform)>, overkill_map: Res<OverkillLookupTable>) {
     let mut new_bloons: Vec<(Bloon, RoadEntity, Transform, Sprite)> = vec![];
     for (e, bloon, re, pos) in &bloons {
         if bloon.hp > 0 { continue; }
         // Decide whether layer skip is necessary or not
-        // let child_bloons = if bloon.hp == 0 { bloon.get_child_bloons() } else { calculate_overkill_iterative(bloon) };
-        let child_bloons = bloon.get_child_bloons();
+        let child_bloons = if bloon.hp == 0 { bloon.get_child_bloons() } else { calculate_overkill(bloon, &**overkill_map) };
+        // let child_bloons = bloon.get_child_bloons();
         // println!("popping {:?} gives children: {:?}", bloon, child_bloons);
         match child_bloons.len() {
             0 => { cmd.entity(e).despawn(); },
@@ -380,24 +386,46 @@ pub fn despawn_exited_bloons(mut cmd: Commands, map: Res<Map>, bloons: Query<(En
     }
 }
 
+/// A system that generates an overkill table; it's very jank, redo later (TODO)
+pub fn generate_lookup_overkill_bloon(mut map: ResMut<OverkillLookupTable>) {
+    // this is a terrible function and I don't care to make it good - assume that all bloons have 1 hp
+    // well, except bloons listed in `starters`, they are already overkilled, so I don't care if they have more than 1 base hp
+    let starters = vec![
+        BloonTier::Ceramic, BloonTier::Purple, BloonTier::Lead,
+        BloonTier::Rainbow, BloonTier::Zebra, BloonTier::Black, BloonTier::White,
+        BloonTier::Pink, BloonTier::Yellow, BloonTier::Green, BloonTier::Blue, BloonTier::Red
+    ];
+    for tier in &starters {
+        let mut cur_ch = tier.get_base_child_bloons();
+        let mut i = 0;
+        while cur_ch.len() > 0 {
+            map.0.insert((*tier, i), cur_ch.to_vec());
+            let mut temp = vec![];
+            cur_ch.iter().for_each(|ch| temp.append(&mut ch.get_base_child_bloons()));
+            cur_ch = temp;
+            i -= 1;
+        }
+    }
+}
+
 /*
     Helper functions
 */
 
 /// Assume bloon.hp to be 0 or <0. Return all children that it would spawn, taking overkill (layer skip) into account
-pub fn calculate_overkill(bloon: &Bloon)->Vec<Bloon> {
-    let mut children = bloon.get_child_bloons();
-    if bloon.hp < 0 {
-        let mut new_children = vec![];
-        for mut ch in children {
-            ch.hp += bloon.hp;
-            new_children.append(&mut calculate_overkill(&ch));
-        }
-        children = new_children;
-    }
-    children.sort();
-    return children;
-}
+// pub fn calculate_overkill(bloon: &Bloon)->Vec<Bloon> {
+//     let mut children = bloon.get_child_bloons();
+//     if bloon.hp < 0 {
+//         let mut new_children = vec![];
+//         for mut ch in children {
+//             ch.hp += bloon.hp;
+//             new_children.append(&mut calculate_overkill(&ch));
+//         }
+//         children = new_children;
+//     }
+//     children.sort();
+//     return children;
+// }
 
 /// Assume bloon.hp to be 0 or <0. Return all children that it would spawn, taking overkill (layer skip) into account
 pub fn calculate_overkill_iterative(bloon: &Bloon)->Vec<Bloon> {
@@ -425,9 +453,32 @@ pub fn calculate_overkill_iterative(bloon: &Bloon)->Vec<Bloon> {
     return final_children;
 }
 
-// don't look, i'm desperate
-// pub fn lookup_overkill_bloon(bloon: &Bloon)->Vec<Bloon> {
-// }
+/// Assume bloon.hp to be 0 or <0. Return all children that it would spawn, taking overkill (layer skip) into account
+pub fn calculate_overkill(bloon: &Bloon, overkill_bloon_map: &HashMap<(BloonTier, i32),Vec<BloonTier>>)->Vec<Bloon> {
+    if bloon.bloon_tier.get_type() == BloonType::Bloon { return lookup_overkill_bloon(bloon, overkill_bloon_map); }
+    let mut children = bloon.get_child_bloons();
+    if bloon.hp < 0 {
+        let mut new_children = vec![];
+        for mut ch in children {
+            ch.hp += bloon.hp;
+            new_children.append(&mut calculate_overkill(&ch, overkill_bloon_map));
+        }
+        children = new_children;
+    }
+    // children.sort();
+    return children;
+}
+
+pub fn lookup_overkill_bloon(bloon: &Bloon, overkill_bloon_map: &HashMap<(BloonTier, i32),Vec<BloonTier>>)->Vec<Bloon> {
+    if let Some(children) = overkill_bloon_map.get(&(bloon.bloon_tier, bloon.hp)) {
+        let mut out = vec![];
+        for (i, child) in children.iter().enumerate() {
+            out.push(Bloon::with(*child, bloon.bloon_modifiers.to_vec()).child_of(bloon, i as i32, children.len()));
+        }
+        return out;
+    }
+    return vec![];
+}
 
 /// Given a `bloon` which is a child of a just-popped bloon, how many children were spawned `child_num` and `bloon`'s index in those child bloons `i`, update `bloon`'s `child_layer` and `child_tree` appropriately
 pub fn update_child_parent_tree(bloon: &mut Bloon, i: i32, child_num: usize) {
