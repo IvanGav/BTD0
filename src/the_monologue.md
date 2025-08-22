@@ -71,3 +71,21 @@ New insights:
     - Ehh, there might be a way around it. Problem: I am given a node and a list of nodes. I need to test if the given node is a child (part of subtree) of any node in the list. How can I store the nodes for optimal access time complexity.
 - Money earning of regrows is messed up. I also want to have an option to remove the regrown bloons giving pops.
   - Yeah no just don't worry rn, it's actually messed up.
+
+***
+
+My bloon-projectile hit detection is inefficient. I'm not using quadrant idea yet, to be clear. Things to consider:
+- Checking projectile-bloon collisions is the single most expensive oprtation so far.
+- Some projectiles have low base pierce and checking if it has already hit a bloon is cheap.
+- Some projectiles have high pierce and may have lots of bloons they have hit. It might be cheaper to check for overlap first.
+- It's still true that most projectiles won't be hitting any bloons most of the time.
+- Quardarnts idea will only work well if I can iterate over bloons in given quadrant. Otherwise bounding box calculation is cheaper.
+- Bounding box - take the bloon/projectile size and check if they were squares they would overlap. Cheap.
+  - If they do overlap, check if they actually actually hit.
+  - If they do, check if has already hit.
+  - It's likely that bounding box check will yield a true result (IS IT TRUE?). If that's true, checking for past hits before hypot check might be better? (probably not)
+  1. Yup, can confirm, the above worked wonders. I used to check has_hit then true hit. The new order is so much better oh god.
+- Back to the idea of quadrants, maybe use arenas to reset the bloon quadrants every tick and when calculating movement, put it all back?
+  - Can potentailly skip any and all computations for projectiles far from bloons.
+  - Is it common for projectiles to be far from most bloons? I think yes.
+  1. With how good it runs now (look above) I don't want to do this *yet*.

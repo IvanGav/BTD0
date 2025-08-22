@@ -7,7 +7,7 @@ use crate::damage::damage_handling::*;
     Components
 */
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 #[require(DamageDealer)]
 pub struct SimpleProjectile {
     pub vx: f32,

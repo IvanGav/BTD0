@@ -108,9 +108,11 @@ pub fn damage_bloons(mut cmd: Commands, mut damage_ew: EventWriter<BloonDamageEv
     for (pe, mut p, ppos) in &mut p {
         if p.pierce == 0 { continue; }
         for (be, bloon, bpos) in &bloons {
-            if p.has_hit(&BloonHitComparator {family: bloon.family_id, layer: bloon.child_layer, tree: bloon.child_tree}) { continue; }
-            // and here just check for actual collision
-            if hypot(ppos.translation.x - bpos.translation.x, ppos.translation.y - bpos.translation.y) < bloon.bloon_tier.get_base_hitbox_radius() + p.hitbox_radius {
+            let critical_dist = p.hitbox_radius + bloon.bloon_tier.get_base_hitbox_radius();
+            // if AABB intersect, and actually intersect, and hasn't hit before
+            if (bpos.translation.x - ppos.translation.x).abs() < critical_dist && (bpos.translation.y - ppos.translation.y).abs() < critical_dist &&
+            hypot(ppos.translation.x - bpos.translation.x, ppos.translation.y - bpos.translation.y) < critical_dist &&
+            !p.has_hit(&BloonHitComparator {family: bloon.family_id, layer: bloon.child_layer, tree: bloon.child_tree}) {
                 damage_events.push(BloonDamageEvent { damage: p.damage, status_effect: None, bloon: be });
                 p.hit_bloons.push(BloonHitComparator { family: bloon.family_id, layer: bloon.child_layer, tree: bloon.child_tree });
                 p.pierce -= 1;
