@@ -1,16 +1,16 @@
 use bevy::{math::vec2, prelude::*};
 
-use crate::damage::projectile::SimpleProjectile;
+use crate::damage::{damage_handling::DamageDealer, projectile::SimpleProjectile};
 
 /*
     Stuff
 */
 
-#[derive(Clone)]
+// #[derive(Clone)]
 pub struct Attack {
     pub range: f32,
     pub cooldown: i32, pub attack_rate: f32,
-    pub projectile: SimpleProjectile, // needs to be able to hold any projectile type (TODO); maybe have a trait `projectile`?
+    pub projectile: Box<dyn Fn(Vec2)->(SimpleProjectile, DamageDealer) + Send + Sync>, // needs to be able to hold any projectile type (TODO); maybe have a trait `projectile`?
 }
 
 #[derive(Clone, Copy)]
