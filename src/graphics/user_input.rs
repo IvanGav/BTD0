@@ -26,32 +26,32 @@ pub fn keybind_spawn_projectile(mut cmd: Commands, keyboard_input: Res<ButtonInp
         if let Some(pos) = window.cursor_position() {
             let vx = (pos.x-window.width()/2.)/10.;
             let vy = -(pos.y-window.height()/2.)/10.;
-            let damage = 4;
-            let pierce = 10;
-            for _ in 0..100 {
+            let damage = 1;
+            let pierce = 20;
+            for i in 0..100 {
                 cmd.spawn_batch(vec![
                     (
-                        SimpleProjectile { vx: vx, vy: vy, bounce: 0, collide: false, lifetime: 40 },
+                        SimpleProjectile { vx: vx + (i as f32/20.), vy: vy + (i as f32/20.), bounce: 0, collide: false, lifetime: 40 },
                         DamageDealer { damage: damage, pierce: pierce, damage_type: DamageType::Sharp, hitbox_radius: 5., ..default() },
                         Transform::from_translation(vec3(0.,0.,1.)),
                         get_projectile_sprite(),
                     ),(
-                        SimpleProjectile { vx: vx+5., vy: vy, bounce: 0, collide: false, lifetime: 40 },
+                        SimpleProjectile { vx: vx+5. + (i as f32/20.), vy: vy  + (i as f32/20.), bounce: 0, collide: false, lifetime: 40 },
                         DamageDealer { damage: damage, pierce: pierce, damage_type: DamageType::Sharp, hitbox_radius: 5., ..default() },
                         Transform::from_translation(vec3(0.,0.,1.)),
                         get_projectile_sprite(),
                     ),(
-                        SimpleProjectile { vx: vx-5., vy: vy, bounce: 0, collide: false, lifetime: 40 },
+                        SimpleProjectile { vx: vx-5. + (i as f32/20.), vy: vy + (i as f32/20.), bounce: 0, collide: false, lifetime: 40 },
                         DamageDealer { damage: damage, pierce: pierce, damage_type: DamageType::Sharp, hitbox_radius: 5., ..default() },
                         Transform::from_translation(vec3(0.,0.,1.)),
                         get_projectile_sprite(),
                     ),(
-                        SimpleProjectile { vx: vx, vy: vy+5., bounce: 0, collide: false, lifetime: 40 },
+                        SimpleProjectile { vx: vx + (i as f32/20.), vy: vy+5. + (i as f32/20.), bounce: 0, collide: false, lifetime: 40 },
                         DamageDealer { damage: damage, pierce: pierce, damage_type: DamageType::Sharp, hitbox_radius: 5., ..default() },
                         Transform::from_translation(vec3(0.,0.,1.)),
                         get_projectile_sprite(),
                     ),(
-                        SimpleProjectile { vx: vx, vy: vy-5., bounce: 0, collide: false, lifetime: 40 },
+                        SimpleProjectile { vx: vx + (i as f32/20.), vy: vy-5. + (i as f32/20.), bounce: 0, collide: false, lifetime: 40 },
                         DamageDealer { damage: damage, pierce: pierce, damage_type: DamageType::Sharp, hitbox_radius: 5., ..default() },
                         Transform::from_translation(vec3(0.,0.,1.)),
                         get_projectile_sprite(),
