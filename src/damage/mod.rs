@@ -14,8 +14,8 @@ impl Plugin for DamagePlugin {
         )
         .add_systems(FixedUpdate, (
             // projectile::despawn_stray_projectile, 
-            projectile::despawn_simple_projectile, 
-            projectile::move_simple_projectile
+            projectile::despawn_projectile, 
+            projectile::move_projectile
         ));
     }
 }

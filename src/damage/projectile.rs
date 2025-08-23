@@ -9,30 +9,15 @@ use crate::damage::damage_handling::*;
 
 #[derive(Component, Clone)]
 #[require(DamageDealer)]
-pub struct SimpleProjectile {
-    pub vx: f32,
-    pub vy: f32,
-    pub bounce: i32, // number of allowed bounces
-    pub collide: bool, // if false, don't collide with obstacles
-    pub lifetime: i32,
+pub enum Projectile {
+    Simple { velocity: Vec2, lifetime: i32, collide: bool },
+    // Bouncing { velocity: Vec2, lifetime: i32, bounce: i32 },
+    Static { waypoint: Option<Vec2>, lifetime: i32 },
 }
 
-#[derive(Component)]
-#[require(DamageDealer)]
-pub struct HomingProjectile {
-    pub vx: f32,
-    pub vy: f32,
-    pub bounce: i32, // number of allowed bounces
-    pub collide: bool, // if false, don't collide with obstacles
-    pub lifetime: i32,
-}
-
-#[derive(Component)]
-#[require(DamageDealer)]
-pub struct StaticProjectile {
-    pub waypoint: Vec2,
-    pub lifetime: u32,
-}
+/*
+    Impl
+*/
 
 /*
     Non-components
@@ -42,19 +27,36 @@ pub struct StaticProjectile {
     Systems
 */
 
-pub fn move_simple_projectile(mut p: Query<(&mut SimpleProjectile, &mut Transform)>) {
+pub fn move_projectile(mut p: Query<(&mut Projectile, &mut Transform)>) {
     for (mut p, mut pos) in &mut p {
-        // TODO: collision with obstacles (after I got obstacles in the first place)
-        pos.translation.x += p.vx;
-        pos.translation.y += p.vy;
-        p.lifetime -= 1;
+        match &mut *p {
+            Projectile::Simple {velocity, lifetime, collide} => {
+                // TODO: collision with obstacles (after I got obstacles in the first place)
+                pos.translation.x += velocity.x;
+                pos.translation.y += velocity.y;
+                *lifetime -= 1;
+            },
+            Projectile::Static {waypoint, lifetime} => {
+                // TODO: do static projectile logic
+                *lifetime -= 1;
+            }
+        }
     }
 }
 
-pub fn despawn_simple_projectile(mut cmd: Commands, p: Query<(Entity, &SimpleProjectile, &Transform)>) {
+pub fn despawn_projectile(mut cmd: Commands, p: Query<(Entity, &Projectile, &Transform)>) {
     for (e, p, pos) in &p {
-        if p.lifetime <= 0 || (pos.translation.x > 500. || pos.translation.x < -500. || pos.translation.y > 500. || pos.translation.y < -500.) {
-            cmd.entity(e).despawn();
+        match &*p {
+            Projectile::Simple {velocity: _, lifetime, collide: _} => {
+                if *lifetime <= 0 || (pos.translation.x > 500. || pos.translation.x < -500. || pos.translation.y > 500. || pos.translation.y < -500.) {
+                    cmd.entity(e).despawn();
+                }
+            },
+            Projectile::Static {waypoint: _, lifetime} => {
+                if *lifetime <= 0 || (pos.translation.x > 500. || pos.translation.x < -500. || pos.translation.y > 500. || pos.translation.y < -500.) {
+                    cmd.entity(e).despawn();
+                }
+            }
         }
     }
 }

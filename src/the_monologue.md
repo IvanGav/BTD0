@@ -89,3 +89,5 @@ My bloon-projectile hit detection is inefficient. I'm not using quadrant idea ye
   - Can potentailly skip any and all computations for projectiles far from bloons.
   - Is it common for projectiles to be far from most bloons? I think yes.
   1. With how good it runs now (look above) I don't want to do this *yet*.
+
+I'm so overwhelmed by trying to plan ahead so much that I end up not making any decisions at all. Anyway.
