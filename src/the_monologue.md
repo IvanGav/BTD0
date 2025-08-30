@@ -91,3 +91,69 @@ My bloon-projectile hit detection is inefficient. I'm not using quadrant idea ye
   1. With how good it runs now (look above) I don't want to do this *yet*.
 
 I'm so overwhelmed by trying to plan ahead so much that I end up not making any decisions at all. Anyway.
+
+Towers.
+- When effects change, projectile stats need to change. But not on change detection. Only when the effect is added/removed.
+- Theoretically I can make all effects as separate components
+  - That won't work since I can have multiple of the same effect - multiple damage up effects for example
+
+# Getting Ready to Rewrite the Entire Codebase LET'S GOOOO
+
+Notes:
+- When permabrew alch doesn't have any valid targets (all towers in range have the buff) it cannot check all towers for the buff every tick
+  - maybe give him and only him some internal list of buffed towers, so that he doesn't check them again
+- Subtowers can be made as children of their parent towers with bevy hierarchy
+  - make sure to `cmd.entity(parent).remove_children(&[child_entity])` along with `cmd.entity(child).despawn()`
+- Since `velocity` is now stored in `move along the road` movement type, when spawning a bloon that has to be put in there instead of stored in the bloon
+- For the same reason I will need a function that will apply the status effects to bloons' movement component
+- Immunity vs ignoring
+  - For stuff like camo and poseidon+purple, the tower will not target the bloon; the stray shots will go over the bloon
+  - That means, if can't see bloon, projectiles fly over the bloon
+  - For dart+lead and such, the monkey will see and attack the bloon, but the bloon is immune to the projectile damage and will consume the projectile
+- Disambiguation:
+  - Bloon effects = (usually temporary) status effects (slow, weakness, on fire, etc)
+  - Bloon modifiers = immunity to certain damage types (a projectile can pop a bloon iff `cannot_pop_modifiers` & `modifiers` == 0)
+  - Bloon properties = special components that alter a bloon's behavior (Fortified, Regrow)
+- When regrows regrow, they can essentially create unlimited amount of children of the same family. That is a bit of an issue.
+  - I can't really solve this issue unless I move the remembering to bloons (no thanks) or do some jank solution where the family and tree will reset whenever it reaches the end of the tree. Jank, but better than nothing.
+
+Movement:
+- move along the track (bloons, unpopped army)
+  - track_pos: f32, target_node: usize, waypoint: Vec2, velocity: f32
+- simple move - move with a given velocity (any regular projectile)
+  - velocity: Vec2, bounce: i32, collide_height: Option<f32> (if None, don't collide with environment; if Some, collide with environment up to given height level)
+- move to waypoint and stay still (spike)
+  - waypoint: Vec2 (remove this component when arrived at the destination)
+
+Acceleration (only compatible with simple move; does nothing on different entities):
+- steering - steering to a specific point
+  - waypoint: Vec2, steer_str: f32, target_mode: TargetMode (specific entity, closest entity, etc)
+- homing - change own velocity to move towards the target, up to a max velocity
+  - waypoint: Vec2, home_str: f32, max_velocity: f32, target_mode: TargetMode (specific entity, closest entity, etc)
+- seek after hit - after hitting a bloon, redirect self to face the next closest bloon (quincy i think)
+  - hit_bit: bool
+
+Hitboxes:
+- simple hitbox (bloons, projectiles)
+  - radius: f32
+- composite hitbox (blimps)
+  - radii: Vec<f32>, offsets: Vec<Vec2>
+
+Projectile and related:
+- lifetime - every tick decrement; despawn when reaches 0
+  - lifetime: i32
+- lifetime in rounds - every round decrement; despawn when reaches 0 (for permaspike and the one before it)
+  - lifetime_rounds: i32
+- damage dealer - every tick check for collisions with bloons; send events when damaging bloons
+  - damage: i32, cannot_pop_modifiers: BloonModifier, cannot_target_modifiers: BloonModifier, hit_bloons: Vec<(family,layer,tree)>, pierce: u32
+
+Bloon and related:
+- bloon
+  - (family,layer,tree), hp: i32 (negative is overkill amount), modifiers: BloonModifier, effects: Vec<BloonEffect>, tier: BloonTier (primarily for determining children)
+
+Tower and related:
+- attack - enum with many attacks
+  - to spawn a projectile, has a function that takes cmd, transform, tower effects and something else and spawns the projectile
+  - so, there will be a lot of functions such as `attack_dart_100`
+- tower - subtowers are towers with Parent component
+  - attacks: Vec<Attack>, targeting_modes: Vec<TargetingMode>, cur_targeting_mode: usize, effects: Vec<TowerEffect>

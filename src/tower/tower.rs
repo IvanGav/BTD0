@@ -14,6 +14,7 @@ pub enum Attack {
         attack_rate: i32,
         projectile: Projectile,
         damage_dealer: DamageDealer,
+        target_angle: Option<f32>, // the calculated angle where to shoot
     },
     Multiple {
         range: f32,
@@ -23,6 +24,7 @@ pub enum Attack {
         damage_dealer: DamageDealer,
         spread: f32, // angle
         projectile_number: u8,
+        target_angle: Option<f32>, // the calculated angle where to shoot
     }
 }
 
@@ -66,6 +68,7 @@ impl Tower {
                     range: 100.,
                     projectile: Projectile::Simple { velocity: vec2(10.,0.), lifetime: 40, collide: false },
                     damage_dealer: DamageDealer { damage: 1, pierce: 4, damage_type: DamageType::Sharp, hitbox_radius: 5., hit_bloons: vec![] },
+                    target_angle: None
                 }]
             }
         }
@@ -76,18 +79,23 @@ impl Tower {
     Systems
 */
 
-pub fn tower_attack(mut cmd: Commands, mut towers: Query<&mut Tower>, bloons: Query<(&Bloon, &Transform)>) {
-    for mut tower in &mut towers {
+// TODO here
+pub fn tower_attack(mut cmd: Commands, mut towers: Query<(&mut Tower, &Transform)>, bloons: Query<(&Bloon, &Transform)>) {
+    for (mut tower, pos) in &mut towers {
         let targeting_mode = tower.allowed_targeting_modes[tower.cur_targeting_mode];
         for attack in &mut tower.attacks {
             match attack {
-                Attack::Single {range, cooldown, attack_rate, projectile, damage_dealer} => {
+                Attack::Single {range, cooldown, attack_rate, projectile, damage_dealer, target_angle} => {
                     *cooldown -= 1;
-                    if *cooldown <= 0 {
-                        *cooldown = *attack_rate;
-                        // perform the attack
-                        let attack_angle = find_attack_angle(targeting_mode, *range, &bloons);
-                        
+                    if let Some(angle) = target_angle {
+                        if *cooldown <= 0 {
+                            *cooldown = *attack_rate;
+                            // perform the attack
+                            cmd.spawn((
+                                projectile.clone_with_angle(*angle),
+                                damage_dealer.clone()
+                            ));
+                        }
                     }
                 },
                 _ => {}
@@ -100,6 +108,8 @@ pub fn tower_attack(mut cmd: Commands, mut towers: Query<&mut Tower>, bloons: Qu
     Helper functions
 */
 
-fn find_attack_angle(targeting_mode: TargetingMode, range: f32, bloons: &Query<(&Bloon, &Transform)>)->f32 {
+/// Only if sees the center of the hitbox
+fn find_attack_angle(targeting_mode: TargetingMode, range: f32, tower_pos: &Transform, bloons: &Query<(&Bloon, &Transform)>)->f32 {
+    vec2(0.,1.,).angle_to(vec2(1.,0.));
     return 0.;
 }

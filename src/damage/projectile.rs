@@ -19,6 +19,21 @@ pub enum Projectile {
     Impl
 */
 
+// TODO here
+impl Projectile {
+    pub fn clone_with_angle(&self, angle: f32)->Self {
+        let directed = self.clone();
+        match directed {
+            Projectile::Simple {velocity, lifetime: _, collide: _} => {
+                let abs_vel = velocity.x;
+                velocity.length();
+            },
+            _ => {}
+        };
+        return directed;
+    }
+}
+
 /*
     Non-components
 */

@@ -8,7 +8,7 @@ use crate::bloon::bloon::*;
     Components
 */
 
-#[derive(Component, Default)]
+#[derive(Component, Default, Clone)]
 /// A struct that allows an entity to deal damage to bloons
 pub struct DamageDealer {
     pub damage: i32,
@@ -35,6 +35,7 @@ pub enum DamageType {
     Cold, // cannot damage SharpImmune (lead) and ColdImmune (white)
 }
 
+#[derive(Clone)]
 /// Purely used to test for bloon hits
 pub struct BloonHitComparator {
     pub family: u32,
