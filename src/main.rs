@@ -15,8 +15,11 @@ use damage::*;
 mod tower;
 use tower::*;
 
+mod core;
+use core::*;
+
 fn main() {
     App::new()
-        .add_plugins((DefaultPlugins, MapPlugin, BloonPlugin, GraphicsPlugin, DamagePlugin, TowerPlugin))
+        .add_plugins((DefaultPlugins, GraphicsPlugin, BTD0CorePlugin))
         .run();
 }
