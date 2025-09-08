@@ -157,3 +157,94 @@ Tower and related:
   - so, there will be a lot of functions such as `attack_dart_100`
 - tower - subtowers are towers with Parent component
   - attacks: Vec<Attack>, targeting_modes: Vec<TargetingMode>, cur_targeting_mode: usize, effects: Vec<TowerEffect>
+
+***
+
+All good and dandy, but, towers are still just as much of a pain, actually.
+- Attack types:
+  - Single (dart, heli) - angle targeting, entity provided for homing
+  - Instahit (sniper) - entity targeting
+  - ArcSpread (sun avatar) - angle targeting, spread stat
+  - Circle (ace)
+  - Teleport (mortar)
+- Projectile Stats:
+  - Damage - can be buffed
+  - Pierce - can be buffed
+  - Velocity - can be affected by artifacts
+  - Can hit/target types - can be buffed - cannot modify the stat directly, since cannot unmodify it later
+- Attack Stats:
+  - Range - can be buffed
+  - Cooldown - can be buffed
+- Additional Stats:
+  - Current cooldown
+  - Spread (multishot) - can be buffed
+
+- Buff types:
+  - Global (call to arms)
+  - Area (village)
+  - Single entity (alch, overclock)
+- Buffs from same type of source can:
+  - Stack (mermonkey, ninja)
+  - Override (overclock)
+  - ~~Ignore (alch)~~ - well, that's pretty much override; alch tower doesn't throw any more pots, but they would override
+  - All stacking buffs are not direct (aka single entity), but global/area
+  - Overriding buffs can be either global/are or direct (aka single entity)
+- Buff duration:
+  - Ticks (overclock)
+  - Rounds (geraldo)
+  - Permanent (alchbuff, village) (IMPORTANT: until removed)
+  - When can buffs be taken away:
+    - Duration ended
+    - Buffing entity despawns (sold/sacrificed/etc)
+  - Area buffs can be given when:
+    - Tower is placed into an area buff range
+    - Tower with area buff is placed near other towers
+
+Having lots of enum types for every single feasable attack type is bothersome. 3 targeting types
+- Angle (dart)
+- Entity (sniper, any homing attacks)
+- Waypoint (spike)
+- Tower (Entity) (alch)
+- RangeBuff (village)
+
+Can be provided as:
+- Angle + Entity (any bloon targeting options - FirstBloon, StrongBloon, LastBloon, CloseBloon, InRange)
+- Waypoint (any road targeting options - CloseRoad, FarRoad, SmartRoad)
+- None (Always targeting option, such as ace)
+- Entity (any monkey targeting options - CloseTower)
+
+Different **attacks** may want to track own **state**
+- MAD alterating shots
+- Desperado staggered shots
+
+Different monkeys may want to have special conditions on their attacks
+- Glue doesn't target glued bloons
+- Alch doesn't target buffed monkeys
+- Base ice can't target blimps
+
+
+Bloon detection stats:
+- Range
+- Target types (lead,white,black,purple,etc)
+- Non-glued (lower tiers of the same path are ignored)
+- Non-alch-buffed
+- Bloon/Blimp/Boss
+
+Those Bloon Detection Stats are separate from the projectile. They are inherintly attack's responsibility.
+
+What bloon will be shot is determined by Bloon Detection Stats. **They are aware of tower type/crosspath too**.
+What projectile will be spawned is determined by a function that is unique to each tower path. **They are implicitly aware of tower type/crosspath**.
+
+Functions that spawn projectiles will take:
+- cmd: Commands
+- angle: f32, e: Entity OR waypoint: Vec2
+- effects: Vec<TowerEffect> OR some kind of struct reference that has pre-calculated buff stats
+- state: &mut AttackState (some kind of enum that stores a unique state required for this attack)
+
+Different towers want to have different behaviors:
+- Clickable, upgradable tower
+- Clickable, non-upgradable tower (cave monkey)
+- Clickable, non-upgradable subtower (shooty turret)
+- Non-clickable subtower (heli, ace, phoenix, buccaneer planes)
+
+Also, detection range and attack range are different - advanced intel sub

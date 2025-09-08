@@ -7,6 +7,7 @@ pub mod projectile;
 pub mod tower;
 pub mod map;
 pub mod event;
+pub mod attack_fn;
 
 pub struct BTD0CorePlugin;
 

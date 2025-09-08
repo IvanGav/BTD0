@@ -45,6 +45,11 @@ pub fn keybind_spawn_projectile(mut cmd: Commands, keyboard_input: Res<ButtonInp
 }
 
 pub fn keybind_spawn_projectile_number(mut cmd: Commands, keyboard_input: Res<ButtonInput<KeyCode>>, window: Single<&Window, With<PrimaryWindow>>) {
+    // if keyboard_input.just_pressed(KeyCode::KeyP) {
+    //     cmd.insert_resource(Time::<Fixed>::from_hz(256.0));
+    //     return;
+    // }
+
     let damage = if keyboard_input.just_pressed(KeyCode::Numpad1) {
         1
     } else if keyboard_input.just_pressed(KeyCode::Numpad2) {
