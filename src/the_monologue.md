@@ -237,9 +237,10 @@ What projectile will be spawned is determined by a function that is unique to ea
 
 Functions that spawn projectiles will take:
 - cmd: Commands
-- angle: f32, e: Entity OR waypoint: Vec2
+- angle: f32, e: Entity OR waypoint: Vec2 (angle will be the tower rotation for dartling)
 - effects: Vec<TowerEffect> OR some kind of struct reference that has pre-calculated buff stats
 - state: &mut AttackState (some kind of enum that stores a unique state required for this attack)
+- tower_pos: Vec3
 
 Different towers want to have different behaviors:
 - Clickable, upgradable tower
@@ -248,3 +249,21 @@ Different towers want to have different behaviors:
 - Non-clickable subtower (heli, ace, phoenix, buccaneer planes)
 
 Also, detection range and attack range are different - advanced intel sub
+
+When upgrading:
+- Save buffs, current targeting mode
+- Don't save attacks (buf reapply stuff like jerry fire, which is an attack) and targeting modes, as they belong to a tower "prototype"
+- Ability cooldowns are saved... sometimes
+
+### What about upgrades?
+
+How do I store upgrades?
+
+Types of upgrades:
+- 555 crosspath for literally all buyable monkeys
+  - upgrade 1 path up to 5/5 and 1 path to 2/5 (last one stays 0/5)
+  - easily get what crosspath it is
+  - easily get available upgrades (referred to by upgrade number)
+- None for subtowers and special towers
+- something weird for artifacts
+- something else weird for maybe upgradable powerups

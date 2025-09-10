@@ -146,9 +146,10 @@ pub enum DamageType {
 /// Effects that bloons can have. Duration in game ticks. No duration indicates an instant effect, such as de-fortify.
 #[derive(PartialEq, Clone, Copy)]
 pub enum BloonEffect {
-    Weakness {strength: i32, duration: i32},
-    Speed {strength: f32, duration: i32}, // also serves as slow and stun
-    BonusIncome {strength: i32, duration: i32},
+    Weakness { duration: Option<i32>, strength: i32 },
+    Speed { duration: Option<i32>, strength: f32 }, // also serves as slow and stun
+    BonusIncome { duration: Option<i32>, strength: i32 },
+    DamageOverTime { duration: Option<i32>, damage: i32, tick_rate: u32 },
 }
 
 /// Every bloon tier has an associated type that determines interactions with damage dealers

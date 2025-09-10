@@ -8,6 +8,7 @@ pub mod tower;
 pub mod map;
 pub mod event;
 pub mod attack_fn;
+pub mod upgradable;
 
 pub struct BTD0CorePlugin;
 

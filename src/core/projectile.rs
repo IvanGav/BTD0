@@ -47,27 +47,6 @@ impl DamageDealer {
     Systems
 */
 
-// /// Test if projectiles collide with bloons. If yes, send a damage taken event.
-// pub fn damage_bloons(mut cmd: Commands, mut damage_ew: EventWriter<BloonDamageEvent>, bloons: Query<(Entity, &Bloon, &HitboxSimple, &Transform)>, mut p: Query<(Entity, &mut DamageDealer, &HitboxSimple, &Transform)>) {
-//     let mut damage_events = vec![];
-//     for (pe, mut p, phb, ppos) in &mut p {
-//         if p.pierce == 0 { continue; }
-//         for (be, bloon, bhb, bpos) in &bloons {
-//             let critical_dist = phb.radius + bhb.radius;
-//             // if AABB intersect, and actually intersect, and hasn't hit before
-//             if (bpos.translation.x - ppos.translation.x).abs() < critical_dist && (bpos.translation.y - ppos.translation.y).abs() < critical_dist &&
-//             hypot(ppos.translation.x - bpos.translation.x, ppos.translation.y - bpos.translation.y) < critical_dist &&
-//             !p.has_hit(&bloon.bid) {
-//                 damage_events.push(BloonDamageEvent { damage: p.damage, status_effect: None, bloon: be });
-//                 p.hit_bloons.push(bloon.bid.clone());
-//                 p.pierce -= 1;
-//                 if p.pierce == 0 { cmd.entity(pe).despawn(); break; }
-//             }
-//         }
-//     }
-//     damage_ew.send_batch(damage_events);
-// }
-
 /// Test if projectiles collide with bloons. If yes, send a damage taken event.
 /// Ok this parallel shit rocks. Like, it went from turning my game into a slideshow to tanking to stable 20 fps... with 2x bloons on screen. Crazy how much difference parallel makes.
 pub fn damage_bloons(cmd: ParallelCommands, damage_ew: EventWriter<BloonDamageEvent>, bloons: Query<(Entity, &Bloon, &HitboxSimple, &Transform)>, mut p: Query<(Entity, &mut DamageDealer, &HitboxSimple, &Transform)>) {
